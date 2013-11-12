@@ -1,0 +1,9 @@
+## NAMDConf ##
+'''Object model and functions for parsing NAMD config files.
+This can be used to automatically interpret run information and
+make decisions about burn-in times, naming conventions, and
+mapping back to file information for extracting future run
+conditions and writing out configuration files.'''
+
+class NAMDConf(object):
+    
