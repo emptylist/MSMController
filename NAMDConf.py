@@ -18,7 +18,83 @@ class NAMDConf(object):
             self._variables = {}
         else:
             self._parameters, self._variables = self._parse(filename)
-        self._required_parameters = []
+        self._required_parameters = [
+              "numsteps"
+            , "coordinates"
+            , "structure"
+            , "parameters"
+            , "exclude"
+            , "outputname"]
+        ''' ##YAGNI values##
+        self._input_file_parameters = [
+              "coordinates"
+            , "structure"
+            , "parameters"
+            , "paraTypeXplor"
+            , "paraTypeCharmm"
+            , "velocities"
+            , "binvelocities"
+            , "bincoordinates"
+            , "cwd"
+            ]
+        self._output_file_parameters = [
+              "outputname"
+            , "binaryoutput"
+            , "restartname"
+            , "restartfreq"
+            , "restartsave"
+            , "binaryrestart"
+            , "DCDfile"
+            , "DCDfreq"
+            , "DCDUnitCell"
+            , "velDCDfile"
+            , "velDCDfreq"
+            ]
+        self._standard_output_parameters = [
+              "outputEnergies"
+            , "mergeCrossterms"
+            , "outputMomenta"
+            , "outputPressure"
+            , "outputTiming"
+            ]
+        self._timestep_parameters = [
+              "numsteps"
+            , "timestep"
+            , "firsttimestep"
+            , "stepspercycle"
+            ]
+        self._simulation_space_partitioning_parameters = [
+              "cutoff"
+            , "switching"
+            , "limitdist"
+            , "pairlistdist"
+            , "splitPatch"
+            , "hgroupCutoff"
+            , "margin"
+            , "pairlistMinProcs"
+            , "pairlistsPerCycle"
+            , "outputPairLists"
+            , "pairlistShrink"
+            , "pairlistGrow"
+            , "pairlistTrigger"
+            ]
+        self._basic_dynamics_parameters = [
+              "exclude"
+            , "temperature"
+            , "COMmotion"
+            , "zeroMomentum"
+            , "dielectric"
+            , "nonbondedScaling"
+            , "1-4scaling"
+            , "vdwGeometricSigma"
+            , "seed"
+            , "rigidBonds"
+            , "rigidTolerance"
+            , "rigidIterations"
+            , "rigidDieOnError"
+            , "useSettle"
+            ]
+        '''
         if verbose:
             self.verbose_on()
         else:
@@ -29,10 +105,10 @@ class NAMDConf(object):
         return self._parameters
 
     def set_parameter(self, k, v):
-        self._parameters[k] = v
+        self._parameters[k.tolower()] = v
 
     def remove_parameter(self, k):
-        self._parameters.pop(k, None)
+        self._parameters.pop(k.tolower(), None)
 
     @property
     def variables(self):
@@ -54,24 +130,37 @@ class NAMDConf(object):
     def verbose_off(self):
         self._verbose = False
 
-    def _parse(self):
+    def _parse(self, filename):
         try:
             with open(filename, 'r') as f:
                 ind = f.readlines()
-        except:
-            print("File " + filename + "can't be located. File parsing failed.")
-
+        except Exception, e:
+            e.message("File " + filename + " can't be located. File parsing failed.")
+        parser = NAMDConfParser(ind)
+        return parser.parameters, parser.variables
+    """
+    ##Old Code, that does not properly work
         parameters = {}
         variables = {}
+        ## some flags controlling primitive nested controls
+        nested_brace = False
+
+        accept_state = True
         for line in ind:
             if not line[0] == '#':
                 text = line.split()
+                if text[0] == '}':
+                    nested_brace = False
+                    accept_state = True
+                else if (open_brace and accept_state):
+                    
                 if text[0] = set:
                     variables[text[1]] = text[2]
                 else:
                     parameters[text[0]] = text[1]
         return parameters, variables
-
+    """
+    
     def _write_warnings(self):
         for key in self._required_parameters:
             if key not in self._parameters:
@@ -81,7 +170,7 @@ class NAMDConf(object):
         try:
             wf = open(filename, 'w')
         except:
-            print("Failed to open " + filename + "for writing.")
+            print("Failed to open " + filename + " for writing.")
         wf.write("## NAMD Configuration File, written by MSMControl on " + date.today() + "\n")
         if self._variables:
             wf.write("## Script Variables\n")
@@ -93,3 +182,24 @@ class NAMDConf(object):
             wf.write(key + "  " + self._parameters[key] + "\n")
         wf.close()
         
+class NAMDConfParser(object):
+    def __init__(self, raw_lines):
+        self._nested_brace = False
+        self.parameters = {}
+        self.variables = {}
+        self._command_tokens = {
+              "SET": self._set
+            , "IF": self._if
+            , "OPEN_BRACE": self._open_brace
+            , "CLOSE_BRACE": self._close_brace
+            }
+        self._parameter_data_size
+        
+    def _tokenize(raw_lines):
+        def clean_comment(s):
+            return s[:(s.find('#'))]
+        cleaned_lines = map(clean_comment, raw_lines)
+        
+    def _parse(tokens):
+        pass
+    
