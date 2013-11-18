@@ -9,6 +9,84 @@ conditions and writing out configuration files.'''
 ## Released under the MIT License
 
 from datetime import date
+from collections import deque
+import re
+
+def _tokenize(raw_lines):
+    '''Function that accepts a list of lines as read in by readlines()
+    and returns a list of tokens for a NAMD Config file.'''
+    def clean_comment(s):
+        return s[:(s.find('#'))]
+    cleaned_lines = map(clean_comment, raw_lines)
+    tokens = deque()
+    for line in cleaned_lines:
+        sline = re.split('([{}])|[\s]', line)
+        for dummy_index in range(sline.count(None)):
+            sline.remove(None)
+        for entry in sline:
+            tokens.append(entry.lower())
+        tokens.append("newline")
+    return tokens
+    
+class NAMDConfParser(object):
+    def __init__(self, raw_lines):
+        self.parameters = {}
+        self.variables = {}
+        self._command_tokens = {
+              "set": self._set
+            , "if": self._if
+            , "{": self._open_brace
+            , "}": self._close_brace
+            , "newline": self._newline
+            }
+        self._parameter_data_size = {
+              "cellbasisvector1" : 3
+            , "cellbasisvector2" : 3
+            , "cellbasisvector3" : 3
+            , "cellorigin"       : 3
+            }
+        self._tokens = _tokenize(raw_lines)
+        self._parse_tokens(tokens)
+
+    def _set(self):
+        pass
+
+    def _if(self):
+        pass
+
+    def _open_brace(self):
+        pass
+
+    def _close_brace(self):
+        pass
+
+    def _newline(self):
+        self._binding_variable = False
+        self._current_name = None
+        self._line_number += 1
+
+    def _bind_parameter(self):
+        pass
+    
+    def _parse_tokens(self):
+        self._nested_scope = False
+        self._conditional = False
+        self._accepting = True
+        self._binding_variable = False
+        self._current_name = None
+        self._line_number = 0
+        while self._tokens:
+            current_token = self._tokens.popleft()
+            self._command_tokens.get(current_token, self._bind_parameter)()
+
+def _parse(filename):
+    try:
+        with open(filename, 'r') as f:
+            ind = f.readlines()
+    except Exception, e:
+        e.message(filename + " couldn't be opened.  Parsing failed.")
+    parser = NAMDConfParser(ind)
+    return parser.parameters, parser.variables
 
 class NAMDConf(object):
     '''Object holding NAMD configuration file information.'''
@@ -181,25 +259,4 @@ class NAMDConf(object):
         for key in self._parameters:
             wf.write(key + "  " + self._parameters[key] + "\n")
         wf.close()
-        
-class NAMDConfParser(object):
-    def __init__(self, raw_lines):
-        self._nested_brace = False
-        self.parameters = {}
-        self.variables = {}
-        self._command_tokens = {
-              "SET": self._set
-            , "IF": self._if
-            , "OPEN_BRACE": self._open_brace
-            , "CLOSE_BRACE": self._close_brace
-            }
-        self._parameter_data_size
-        
-    def _tokenize(raw_lines):
-        def clean_comment(s):
-            return s[:(s.find('#'))]
-        cleaned_lines = map(clean_comment, raw_lines)
-        
-    def _parse(tokens):
-        pass
-    
+
