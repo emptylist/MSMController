@@ -29,6 +29,15 @@ def _tokenize(raw_lines):
     return tokens
     
 class NAMDConfParser(object):
+    '''Class for building parser objects.  The parser object is designed to parse
+    a list of lines read from a text file exactly once.  The parser has no "public"
+    methods, and should only be used to parse text upon initialization.  The parser
+    is modeled as a Finite State Machine, and should be discarded immediately upon
+    finishing because it is stateful and messy as all hell. The parse function
+    builds a parser, uses it to parse text, and returns the parsed values, allowing
+    the GC to collect the parser as it goes out of scope. Thus parse acts as a
+    functional interface, allowing us to wrap the messy statefulness of the FSM
+    behind a functional interface.'''
     def __init__(self, raw_lines):
         self.parameters = {}
         self.variables = {}
@@ -79,7 +88,7 @@ class NAMDConfParser(object):
             current_token = self._tokens.popleft()
             self._command_tokens.get(current_token, self._bind_parameter)()
 
-def _parse(filename):
+def parse(filename):
     try:
         with open(filename, 'r') as f:
             ind = f.readlines()
@@ -95,7 +104,7 @@ class NAMDConf(object):
             self._parameters = {}
             self._variables = {}
         else:
-            self._parameters, self._variables = self._parse(filename)
+            self._parameters, self._variables = parse(filename)
         self._required_parameters = [
               "numsteps"
             , "coordinates"
@@ -103,76 +112,6 @@ class NAMDConf(object):
             , "parameters"
             , "exclude"
             , "outputname"]
-        ''' ##YAGNI values##
-        self._input_file_parameters = [
-              "coordinates"
-            , "structure"
-            , "parameters"
-            , "paraTypeXplor"
-            , "paraTypeCharmm"
-            , "velocities"
-            , "binvelocities"
-            , "bincoordinates"
-            , "cwd"
-            ]
-        self._output_file_parameters = [
-              "outputname"
-            , "binaryoutput"
-            , "restartname"
-            , "restartfreq"
-            , "restartsave"
-            , "binaryrestart"
-            , "DCDfile"
-            , "DCDfreq"
-            , "DCDUnitCell"
-            , "velDCDfile"
-            , "velDCDfreq"
-            ]
-        self._standard_output_parameters = [
-              "outputEnergies"
-            , "mergeCrossterms"
-            , "outputMomenta"
-            , "outputPressure"
-            , "outputTiming"
-            ]
-        self._timestep_parameters = [
-              "numsteps"
-            , "timestep"
-            , "firsttimestep"
-            , "stepspercycle"
-            ]
-        self._simulation_space_partitioning_parameters = [
-              "cutoff"
-            , "switching"
-            , "limitdist"
-            , "pairlistdist"
-            , "splitPatch"
-            , "hgroupCutoff"
-            , "margin"
-            , "pairlistMinProcs"
-            , "pairlistsPerCycle"
-            , "outputPairLists"
-            , "pairlistShrink"
-            , "pairlistGrow"
-            , "pairlistTrigger"
-            ]
-        self._basic_dynamics_parameters = [
-              "exclude"
-            , "temperature"
-            , "COMmotion"
-            , "zeroMomentum"
-            , "dielectric"
-            , "nonbondedScaling"
-            , "1-4scaling"
-            , "vdwGeometricSigma"
-            , "seed"
-            , "rigidBonds"
-            , "rigidTolerance"
-            , "rigidIterations"
-            , "rigidDieOnError"
-            , "useSettle"
-            ]
-        '''
         if verbose:
             self.verbose_on()
         else:
@@ -207,37 +146,6 @@ class NAMDConf(object):
 
     def verbose_off(self):
         self._verbose = False
-
-    def _parse(self, filename):
-        try:
-            with open(filename, 'r') as f:
-                ind = f.readlines()
-        except Exception, e:
-            e.message("File " + filename + " can't be located. File parsing failed.")
-        parser = NAMDConfParser(ind)
-        return parser.parameters, parser.variables
-    """
-    ##Old Code, that does not properly work
-        parameters = {}
-        variables = {}
-        ## some flags controlling primitive nested controls
-        nested_brace = False
-
-        accept_state = True
-        for line in ind:
-            if not line[0] == '#':
-                text = line.split()
-                if text[0] == '}':
-                    nested_brace = False
-                    accept_state = True
-                else if (open_brace and accept_state):
-                    
-                if text[0] = set:
-                    variables[text[1]] = text[2]
-                else:
-                    parameters[text[0]] = text[1]
-        return parameters, variables
-    """
     
     def _write_warnings(self):
         for key in self._required_parameters:
