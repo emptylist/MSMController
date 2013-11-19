@@ -65,13 +65,27 @@ class NAMDConfParser(object):
             self._binding_variable = True
 
     def _if(self):
-        pass
+        if self._accepting:
+            self._conditional = True
 
     def _open_brace(self):
-        pass
+        if self._conditional:
+            self._conditional_scope = True
+            self._conditional = False
+        else:
+            self._binding_scope = True
 
     def _close_brace(self):
-        pass
+        if self._conditional_scope:
+            try:
+                self._accepting = all(map(int, self._token_buffer))
+            except:
+                print("Error encounter on line " + self._line_number + ". Ignoring following scope.\n")
+                self._accepting = False
+            self._conditional_scope = False
+        else:
+            self._accepting = True
+            self._binding_scope = False
 
     def _newline(self):
         self._binding_variable = False
@@ -88,18 +102,23 @@ class NAMDConfParser(object):
             self.parameters.update({self._current_name : self._current_token})
 
     def _dispatch_binding(self):
-        if self._current_name:
-            self._bind_value()
-        else:
-            self._bind_name()
+        if self._accepting:
+            if self._conditional_scope:
+                self._token_buffer.append(self._current_token)
+            elif self._current_name:
+                self._bind_value()
+            else:
+                self._bind_name()
 
     def _parse_tokens(self):
-        self._nested_scope = False
+        self._binding_scope = False
+        self._conditional_scope = False
         self._conditional = False
         self._accepting = True
         self._binding_variable = False
         self._current_name = None
         self._line_number = 0
+        self._token_buffer = []
         while self._tokens:
             self._current_token = self._tokens.popleft()
             self._command_tokens.get(self._current_token, self._dispatch_binding)()
