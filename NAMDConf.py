@@ -14,7 +14,7 @@ import re
 
 def _tokenize(raw_lines):
     '''Function that accepts a list of lines as read in by readlines()
-    and returns a list of tokens for a NAMD Config file.'''
+    and returns a deque of tokens for a NAMD Config file.'''
     def clean_comment(s):
         return s[:(s.find('#'))]
     cleaned_lines = map(clean_comment, raw_lines)
@@ -38,6 +38,9 @@ class NAMDConfParser(object):
     the GC to collect the parser as it goes out of scope. Thus parse acts as a
     functional interface, allowing us to wrap the messy statefulness of the FSM
     behind a functional interface.'''
+    ## "One does not simply read the source code"
+    ## Here begins a mess
+    ## but at least it's tightly contained
     def __init__(self, raw_lines):
         self.parameters = {}
         self.variables = {}
@@ -58,7 +61,8 @@ class NAMDConfParser(object):
         self._parse_tokens(tokens)
 
     def _set(self):
-        pass
+        if self._accepting:
+            self._binding_variable = True
 
     def _if(self):
         pass
@@ -74,9 +78,21 @@ class NAMDConfParser(object):
         self._current_name = None
         self._line_number += 1
 
-    def _bind_parameter(self):
-        pass
+    def _bind_name(self):
+        self._current_name = self._current_token
     
+    def _bind_value(self):
+        if self._binding_variable:
+            self.variables.update({self._current_name : self._current_token})
+        else:
+            self.parameters.update({self._current_name : self._current_token})
+
+    def _dispatch_binding(self):
+        if self._current_name:
+            self._bind_value()
+        else:
+            self._bind_name()
+
     def _parse_tokens(self):
         self._nested_scope = False
         self._conditional = False
@@ -85,8 +101,8 @@ class NAMDConfParser(object):
         self._current_name = None
         self._line_number = 0
         while self._tokens:
-            current_token = self._tokens.popleft()
-            self._command_tokens.get(current_token, self._bind_parameter)()
+            self._current_token = self._tokens.popleft()
+            self._command_tokens.get(self._current_token, self._dispatch_binding)()
 
 def parse(filename):
     try:
