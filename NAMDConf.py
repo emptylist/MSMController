@@ -8,8 +8,10 @@ conditions and writing out configuration files.'''
 ## Copyright 2013 James Crooks
 ## Released under the MIT License
 
-from datetime import date
+from util import DictDiff
+from datetime import date, datetime
 from collections import deque
+from functools import wraps
 import re
 
 def _tokenize(raw_lines):
@@ -151,24 +153,44 @@ class NAMDConf(object):
             self.verbose_on()
         else:
             self.verbose_off()
+        self._log = []
+
+    @property
+    def log(self):
+        return self._log
+
+    def logger(func):
+        @wraps(func)
+        def wrapper(self, *args):
+            old_parameters = self._parameters
+            old_variables = self._variables
+            timestamp = str(datetime.datetime.now())
+            func(self, *args)
+            self._log.append(DictDiffer(old_parameters, self._parameters).changes)
+            self._log.append(DictDiffer(old_variables, self._parameters).changes)
+        return wrapper
 
     @property
     def parameters(self):
         return self._parameters
 
+    @logger
     def set_parameter(self, k, v):
         self._parameters[k.tolower()] = v
 
+    @logger
     def remove_parameter(self, k):
         self._parameters.pop(k.tolower(), None)
 
     @property
     def variables(self):
         return self._variables
-
+    
+    @logger
     def set_variable(self, k, v):
         self._variables[k] = v
         
+    @logger
     def remove_variable(self, k):
         self._variables.pop(k, None)
 
