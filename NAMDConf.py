@@ -92,16 +92,23 @@ class NAMDConfParser(object):
     def _newline(self):
         self._binding_variable = False
         self._current_name = None
+        self._num_values_to_bind = 0
+        self._value_token_buffer = []
         self._line_number += 1
 
     def _bind_name(self):
         self._current_name = self._current_token
+        self._num_values_to_bind = self._parameter_data_size.get(self._current_token, 1)
     
     def _bind_value(self):
-        if self._binding_variable:
-            self.variables.update({self._current_name : self._current_token})
-        else:
-            self.parameters.update({self._current_name : self._current_token})
+        self._num_values_to_bind = max(self._num_values_to_bind - 1, 0)
+        self._value_token_buffer.append(self._current_token)
+        if not self._num_values_to_bind:
+            if self._binding_variable:
+                self.variables.update({self._current_name : " ".join(self._value_token_buffer)})
+            else:
+                self.parameters.update({self._current_name : " ".join(self._value_token_buffer)})
+            self._value_token_buffer = []
 
     def _dispatch_binding(self):
         if self._accepting:
@@ -121,6 +128,8 @@ class NAMDConfParser(object):
         self._current_name = None
         self._line_number = 0
         self._token_buffer = []
+        self._value_token_buffer = []
+        self._num_values_to_bind = 0
         while self._tokens:
             self._current_token = self._tokens.popleft()
             self._command_tokens.get(self._current_token, self._dispatch_binding)()
@@ -140,8 +149,10 @@ class NAMDConf(object):
         if filename is None:
             self._parameters = {}
             self._variables = {}
+            self._readfrom = None
         else:
             self._parameters, self._variables = parse(filename)
+            self._readfrom = str(filename)
         self._required_parameters = [
               "numsteps"
             , "coordinates"
@@ -166,8 +177,10 @@ class NAMDConf(object):
             old_variables = self._variables
             timestamp = str(datetime.datetime.now())
             func(self, *args)
-            self._log.append(DictDiffer(old_parameters, self._parameters).changes)
-            self._log.append(DictDiffer(old_variables, self._parameters).changes)
+            if DictDiffer(old_parameters, self._parameters).changes:
+                self._log.append((timestamp, DictDiffer(old_parameters, self._parameters).changes))
+            if DictDiffer(old_parameters, self._parameters).changes:
+                self._log.append(DictDiffer(old_variables, self._parameters).changes)
         return wrapper
 
     @property
@@ -221,7 +234,13 @@ class NAMDConf(object):
                 wf.write("set " + key + " " + self._variables[key] + "\n")
         if self._verbose:
             self._write_warnings()
+        wf.write("## NAMD Parameters\n")
         for key in self._parameters:
             wf.write(key + "  " + self._parameters[key] + "\n")
+        if self._readfrom:
+            wf.write("##LOG: Initial parameters drawn from file " + self._readfrom + "\n")
+        for record in self._log:
+            wf.write("#LOG: " + " ".join(filter(None, [record.timestamp, record.type, record.name,
+                               record.action, record.value]) + "\n")
         wf.close()
 
