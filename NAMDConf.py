@@ -170,7 +170,17 @@ class NAMDConf(object):
     def log(self):
         return self._log
 
+    #The logger function.  It's questionable whether making it into some sort of insane
+    #'hidden method' decorator is overengineering, just stupid, or actually a good call.
+    #I want the overall command script to do most of the logging, however I think that
+    #having the config files log their own histories internally is particularly valuable here,
+    #in addition to any other logging the command script does.
     def logger(func):
+        """The logger function.  It's questionable whether making it into some sort of insane
+        'hidden method' decorator is overengineering, just stupid, or actually a good call.
+        I want the overall command script to do most of the loggin, however, I think that
+        having the config files log their own histories internally is particularly valuable here,
+        in addition to any other logging the command script does."""
         @wraps(func)
         def wrapper(self, *args):
             old_parameters = self._parameters
@@ -216,7 +226,36 @@ class NAMDConf(object):
 
     def verbose_off(self):
         self._verbose = False
+
+    #Here follows some 'properties' exposing particularly useful parameters
+    #I think this makes me an OO-whore for programming this way.
+    #May the Gods of Functional Programming forgive me.
     
+    @property
+    def dcd_file(self):
+        base_name = self.parameters.get("outputname", None)
+        if base_name:
+            return str(base_name) + ".dcd"
+        return none
+
+    @property
+    def psf_file(self):
+        return self.parameters.get("structure", None)
+
+    @property
+    def timestep(self):
+        return self.parameters.get("timestep", None)
+
+    @property
+    def total_time(self):
+        timestep = self.parameters.get("timestep", None)
+        numsteps = self.parameters.get("numsteps", None)
+        if timestep and numsteps:
+            return timestep * numsteps
+        return None
+
+    #Methods that actually do things
+
     def _write_warnings(self):
         for key in self._required_parameters:
             if key not in self._parameters:
