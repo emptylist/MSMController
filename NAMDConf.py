@@ -82,7 +82,8 @@ class NAMDConfParser(object):
             try:
                 self._accepting = all(map(int, self._token_buffer))
             except:
-                print("Error encounter on line " + self._line_number + ". Ignoring following scope.\n")
+                print("Error encounter on line " +
+                      self._line_number + ". Ignoring following scope.\n")
                 self._accepting = False
             self._conditional_scope = False
         else:
@@ -188,7 +189,8 @@ class NAMDConf(object):
             timestamp = str(datetime.datetime.now())
             func(self, *args)
             if DictDiffer(old_parameters, self._parameters).changes:
-                self._log.append((timestamp, DictDiffer(old_parameters, self._parameters).changes))
+                self._log.append((timestamp,
+                                  DictDiffer(old_parameters, self._parameters).changes))
             if DictDiffer(old_parameters, self._parameters).changes:
                 self._log.append(DictDiffer(old_variables, self._parameters).changes)
         return wrapper
@@ -263,23 +265,22 @@ class NAMDConf(object):
 
     def write(self, filename):
         try:
-            wf = open(filename, 'w')
+            with open(filename, 'w') as wf:
+                wf.write("## NAMD Configuration File, written by MSMControl on "
+                         + date.today() + "\n")
+                if self._variables:
+                    wf.write("## Script Variables\n")
+                    for key in self._variables:
+                        wf.write("set " + key + " " + self._variables[key] + "\n")
+                if self._verbose:
+                    self._write_warnings()
+                wf.write("## NAMD Parameters\n")
+                for key in self._parameters:
+                    wf.write(key + "  " + self._parameters[key] + "\n")
+                if self._readfrom:
+                    wf.write("##LOG: Initial parameters drawn from file "+ self._readfrom + "\n")
+                for record in self._log:
+                    wf.write("#LOG: " + " ".join(filter(None, [record.timestamp,
+                            record.type, record.name, record.action, record.value]) + "\n")
         except:
             print("Failed to open " + filename + " for writing.")
-        wf.write("## NAMD Configuration File, written by MSMControl on " + date.today() + "\n")
-        if self._variables:
-            wf.write("## Script Variables\n")
-            for key in self._variables:
-                wf.write("set " + key + " " + self._variables[key] + "\n")
-        if self._verbose:
-            self._write_warnings()
-        wf.write("## NAMD Parameters\n")
-        for key in self._parameters:
-            wf.write(key + "  " + self._parameters[key] + "\n")
-        if self._readfrom:
-            wf.write("##LOG: Initial parameters drawn from file " + self._readfrom + "\n")
-        for record in self._log:
-            wf.write("#LOG: " + " ".join(filter(None, [record.timestamp, record.type, record.name,
-                               record.action, record.value]) + "\n")
-        wf.close()
-
