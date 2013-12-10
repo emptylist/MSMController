@@ -32,4 +32,8 @@ class DictDiff(object):
             self._changes.append("Changed", str(entry[0]), str(entry[1]), str(entry[2]))
     return self._changes
 
-
+# Functional interface to DictDiff, using scoping rules to clean up the DictDiff object
+# after it's no longer needed.
+def dict_diff(old_dict, new_dict):
+    comparer = DictDiff(old_dict, new_dict)
+    return comparer.changes
