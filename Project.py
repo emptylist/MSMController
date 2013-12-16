@@ -8,17 +8,25 @@ class AbstractModel(object):
         self._datasets = datasets
         self._timestamp = str(datetime.now())
         
-    def sample(self):
-        '''Generates sample configurations from the model for initializing new trajectories.'''
-        pass
-
     @property
     def timestamp(self):
         return self.timestamp
 
-    @timestamp.set
     def update_timestamp(self):
         self._timestamp = str(datetime.now())
+
+    @property
+    def datasets(self):
+        return datasets
+
+    def register_new_dataset(self, reduced_dataset_path, full_dataset_path):
+        if reduced_dataset_path not in self._datasets:
+            self._datasets.update({reduced_dataset_path : full_dataset_path})
+        #Else: Raise exception?
+
+    def sample(self):
+        '''Generates sample configurations from the model for initializing new trajectories.'''
+        pass
 
     def build_samples(self):
         '''Pure Virtual Method; this will require interacting with configurations that vary
