@@ -19,11 +19,22 @@ class AbstractModel(object):
     def datasets(self):
         return datasets
 
-    def register_new_dataset(self, reduced_dataset_path, full_dataset_path):
+    #Dataset Handling Methods
+    def register_new_dataset_pair(self, reduced_dataset_path, full_dataset_path):
         if reduced_dataset_path not in self._datasets:
             self._datasets.update({reduced_dataset_path : full_dataset_path})
         #Else: Raise exception?
 
+    def register_new_raw_dataset(self, project_information):
+        reduced_dataset_path, raw_dataset_path = self._process_raw_dataset(raw_dataset_path,
+                                                                           project_information)
+        self.register_new_dataset_pair(reduced_dataset_path, raw_dataset_path)
+
+    def _process_raw_dataset(self):
+        '''Pure Virtual method for processing a new raw dataset.'''
+        raise NotImplementedError
+
+    #Sampling Methods
     def sample(self):
         '''Generates sample configurations from the model for initializing new trajectories.'''
         pass
@@ -34,7 +45,12 @@ class AbstractModel(object):
         raise NotImplementedError
 
 class NAMDModel(AbstractModel):
-    pass
+    def _process_raw_dataset(self, raw_dataset_path):
+        pass
+
+    def build_samples(self):
+        pass
+        
 
 class Project(object):
     def __init__(self):
