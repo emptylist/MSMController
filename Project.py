@@ -4,11 +4,16 @@ project and the models generated.'''
 from datetime import datetime
 
 class AbstractModel(object):
-    def __init__(self, datasets, MSM_model_path = None):
+    def __init__(self, datasets, timestamp = None, raw_data_root = None, MSM_model_path = None):
         self._datasets = datasets
-        self._timestamp = str(datetime.now())
+        if not timestamp:
+            self._timestamp = str(datetime.now())
+        self._raw_data_root = raw_data_root
         if MSM_model_path:
             self.set_MSM_model_path(MSM_model_path)
+        else:
+            self._suggested_runs_root = None
+            self.
 
     #Properties
     @property
